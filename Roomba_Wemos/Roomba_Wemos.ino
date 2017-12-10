@@ -6,18 +6,17 @@
   // MQTT + Wifi                                                                      //
   // ******************************************************************************** //
   
-  const char* ssid = "SmartHome";
-  const char* password = "virslibabszalon";
-  const char* mqtt_server = "iot.eclipse.org";
+  const char* ssid = "Sziliwifi";
+  const char* password = "YFFWFNZZ";
+  const char* mqtt_server = "192.168.137.1";
   
   WiFiClient espClient;
   PubSubClient client(espClient);
   
   long lastMsg = 0;
-  char msg[50];
-  char msgspeed[2];
-  char message_buff[100];
-  int value = 0;
+  char msg[10];
+//  char message_buff[100];
+//  int value = 0;
 
 void setup_wifi() {
           delay(10);
@@ -40,6 +39,7 @@ void setup_wifi() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
+          /*
           Serial.print("Message arrived [");
           Serial.print(topic);
           Serial.print("] ");
@@ -54,6 +54,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
           } else {
             digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off 
           }
+          */
 
 }
 
@@ -91,8 +92,13 @@ void reconnect() {
   // Roomba inicializalas           rxPin, txPin,
   Roomba roomba (new SoftwareSerial(   D1,   D2), Roomba::Baud115200);
 
-  bool stp = true;
 
+//  uint8_t bump_n_wheel [10];
+//  uint8_t bump_n_wheel_old;
+//  bool newdata;
+
+  uint8_t msg_byte [10];
+  
 
 
 
@@ -106,16 +112,22 @@ void reconnect() {
     client.setServer(mqtt_server, 1883);
     client.setCallback(callback);
 
-    /*
-    delay(1000);
+
+    for (int i = 0; i < 10; i++)
+        msg [i] = 0;
+
+    
+    
     roomba.reset();
-    delay(1000);
+    delay(5000);
     roomba.start();
     delay(1000);
     roomba.fullMode();
+    //roomba.clean();
     delay(1000);  
-    */
+    
   }
+
   
   void loop() {
 
@@ -123,23 +135,112 @@ void reconnect() {
       if (!client.connected()) {
         reconnect();
       }
-      
       client.loop();
 
-      long now = millis();
-      if (now - lastMsg > 2000) {
-        lastMsg = now;
-        ++value;
-        snprintf (msg, 75, "%d", 321);
-        msgspeed[0] = 0x01;                 // 321 = 0x141
-        msgspeed[1] = 0x41;
-        Serial.print("Publish message: ");
-        Serial.println((char*)msgspeed);
-        
-        client.publish("penis", msgspeed);
+
+/*
+      delay(100);
+      //roomba.start();
+      delay(100);
+      roomba.getSensors(7, bump_n_wheel, 1);
+      if (!newdata)
+      {
+          if (bump_n_wheel[0] != bump_n_wheel_old)
+          {
+              bump_n_wheel_old = bump_n_wheel[0];
+              newdata = true;
+          }
+              
       }
+      else
+      {
+          int char_written;
+          char_written = snprintf (msg, 10, "%d", bump_n_wheel[0]);
+          client.publish("Roomba_bumpwheel", msg);
+          newdata = false;
+      }
+ }
+      */
       
-    /*
+      
+
+      
+      // 2 másodpercentként történik a publikálás
+      long now = millis(); 
+      if (now - lastMsg > 1000) {
+        lastMsg = now;
+
+        //roomba.start();
+        roomba.getSensors(43, msg_byte, 2); 
+        uint16_t velocity = (msg_byte[0] << 8) | msg_byte[1];
+        snprintf (msg, 10, "%d", velocity);
+        client.publish("Roomba/velocity", msg);
+
+        msg[0] = 0;
+        msg[1] = 0;
+        
+               
+        roomba.getSensors(25, msg_byte, 2);
+        uint16_t batteryCharge = (msg_byte[0] << 8) | msg_byte[1];
+        snprintf (msg, 10, "%d", batteryCharge);
+        client.publish("Roomba/batteryCharge", msg);
+
+        roomba.getSensors(24, msg_byte, 1);
+        uint8_t temperature = msg_byte[0];
+        snprintf (msg, 10, "%d", temperature);
+        client.publish("Roomba/temperature", msg);
+        
+        
+//        if (roomba.getSensors(7, bump_n_wheel, 1))   // bumps n wheels
+//          Serial.println("Uj erkezett:");
+//        else
+//          Serial.println("regi:"); 
+//
+//        int char_written;
+//        char_written = snprintf (msg, 10, "%d", bump_n_wheel[0]);
+//        client.publish("Roomba_bumpwheel", msg);
+//        Serial.println(msg);
+//        Serial.println(char_written);
+      }
+  }
+
+
+/**************************************************************************************************************************************************************/
+// Halott kod. Spooky....
+/**************************************************************************************************************************************************************/
+      /*
+      // 2 másodpercentként történik a publikálás
+      long now = millis(); 
+      if (now - lastMsg > 2000) {
+        
+        lastMsg = now;
+
+
+        if (roomba.getSensors(7, bump_n_wheel, 1))   // bumps n wheels
+          Serial.println("Kiraly!!!! uj adat:");
+        else
+          Serial.println("regi:");
+
+        Serial.print("Publish message: ");
+        Serial.println(bump_n_wheel[0]);
+
+        bump_n_wheel[0] = 7;
+
+        
+        for (int i = 0; i < 10; i++)
+        {
+          c [i] = (char)bump_n_wheel[i];
+        }
+
+        
+        //client.publish("penis", c);
+
+      }
+
+      */
+      
+
+      /*
       if (stp)
       {
         roomba.driveDirect(200, 50);    // turning right
@@ -162,5 +263,6 @@ void reconnect() {
       }
       */
       
-  }
+      
+  
 
